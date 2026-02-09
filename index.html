@@ -180,6 +180,15 @@
             margin-top: 10px;
         }
 
+        .parity-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
         @media (max-width: 800px) {
             .main-container { flex-direction: column; }
             .canvas-container { height: 400px; }
@@ -195,8 +204,8 @@
 <body>
 
 <header>
-    <h1>Simulação 2 espelhos planos</h1>
-    <div class="developer-note">Desenvolvido por Cauan Sérgio</div>
+    <h1>Simulação de dois espelhos planos</h1>
+    <div class="developer-note">Desenvolvido por Cauan Sergio</div>
 </header>
 
 <div class="main-container">
@@ -210,6 +219,11 @@
             <hr style="border: 0; border-top: 1px solid #bdc3c7; margin: 10px 0;">
             <div class="formula-display" id="formulaInfo"></div>
             <div class="warning-box" id="warningBox"></div>
+           <div class="parity-info" id="parityInfo">
+                <strong>Critério de Paridade:</strong><br>
+                • Parte inteira ímpar (1, 3, 5...): considerar ímpar<br>
+                • Parte inteira par (2, 4, 6...): considerar par
+            </div>
         </div>
 
         <div class="control-group">
@@ -238,7 +252,7 @@
                 Distância (Raio)
                 <span id="valRadius">3.0</span>
             </label>
-            <input type="range" id="sliderRadius" min="0.5" max="5.5" value="3.0" step="0.1">
+            <input type="range" id="sliderRadius" min="0.5" max="4.5" value="3.0" step="0.1">
         </div>
 
         <div class="buttons-row">
@@ -266,6 +280,7 @@
     const statsInfo = document.getElementById('statsInfo');
     const formulaInfo = document.getElementById('formulaInfo');
     const warningBox = document.getElementById('warningBox');
+    const parityInfo = document.getElementById('parityInfo');
     const btnBisector = document.getElementById('btnBisector');
     const btnReset = document.getElementById('btnReset');
 
@@ -286,7 +301,7 @@
 
     function isOnBisector(objAngle, theta) {
         const bisector = theta / 2.0;
-        // Tolerância de 0.5 graus conforme o código Python original
+        // Tolerância de 0.5 graus
         return Math.abs(objAngle - bisector) < 0.5;
     }
 
@@ -298,12 +313,17 @@
                 N: Infinity, 
                 formula: "θ = 0°\nEspelhos paralelos\nN = ∞ (infinitas imagens)",
                 isExactDivisor: false,
-                infiniteImages: true
+                infiniteImages: true,
+                parity: "N/A"
             };
         }
         
         const ratio = 360.0 / thetaDeg;
-        const N_int = Math.floor(ratio);
+        const N_int = Math.floor(ratio); // Parte inteira de 360/θ
+        
+        // Determinar paridade baseado na parte inteira
+        const isIntPartOdd = (N_int % 2 === 1);
+        const parity = isIntPartOdd ? "ímpar" : "par";
         
         // Verifica se é divisor exato (360/θ é inteiro)
         const isExactDivisor = Math.abs(ratio - N_int) < 1e-10;
@@ -312,29 +332,53 @@
 
         if (isExactDivisor) {
             // Caso 1: 360/θ é inteiro
+            // Determinar paridade baseado no valor inteiro
             if (N_int % 2 === 0) {
                 // N é PAR: N = (360/θ) - 1
                 N = N_int - 1;
-                formula = `360°/${thetaDeg}° = ${N_int} (par)\nN = ${N_int} - 1 = ${N}`;
+                formula = `360°/${thetaDeg}° = ${N_int} (inteiro par)\nN = ${N_int} - 1 = ${N}`;
             } else {
                 // N é ÍMPAR
                 if (objOnBisector) {
                     // Na bissetriz: N = (360/θ) - 1
                     N = N_int - 1;
-                    formula = `360°/${thetaDeg}° = ${N_int} (ímpar)\nObjeto NA bissetriz\nN = ${N_int} - 1 = ${N}`;
+                    formula = `360°/${thetaDeg}° = ${N_int} (inteiro ímpar)\nObjeto NA bissetriz\nN = ${N_int} - 1 = ${N}`;
                 } else {
                     // Fora da bissetriz: N = 360/θ
                     N = N_int;
-                    formula = `360°/${thetaDeg}° = ${N_int} (ímpar)\nObjeto FORA da bissetriz\nN = ${N_int}`;
+                    formula = `360°/${thetaDeg}° = ${N_int} (inteiro ímpar)\nObjeto FORA da bissetriz\nN = ${N_int}`;
                 }
             }
         } else {
-            // Caso 2: 360/θ NÃO é inteiro: N = floor(360/θ)
-            N = Math.floor(ratio); // Apenas a parte inteira
-            formula = `360°/${thetaDeg}° ≈ ${ratio.toFixed(2)} (fracionário)\nN = int(${ratio.toFixed(2)}) = ${N}`;
+            // Caso 2: 360/θ NÃO é inteiro
+            // Usar paridade baseada na parte inteira
+            if (isIntPartOdd) {
+                // Parte inteira é ÍMPAR
+                if (objOnBisector) {
+                    // Na bissetriz: N = floor(360/θ) - 1
+                    N = N_int - 1;
+                    formula = `360°/${thetaDeg}° ≈ ${ratio.toFixed(2)}\nParte inteira = ${N_int} (ímpar)\nObjeto NA bissetriz\nN = ${N_int} - 1 = ${N}`;
+                } else {
+                    // Fora da bissetriz: N = floor(360/θ)
+                    N = N_int;
+                    formula = `360°/${thetaDeg}° ≈ ${ratio.toFixed(2)}\nParte inteira = ${N_int} (ímpar)\nObjeto FORA da bissetriz\nN = ${N_int}`;
+                }
+            } else {
+                // Parte inteira é PAR: N = floor(360/θ) - 1
+                N = N_int - 1;
+                formula = `360°/${thetaDeg}° ≈ ${ratio.toFixed(2)}\nParte inteira = ${N_int} (par)\nN = ${N_int} - 1 = ${N}`;
+            }
         }
 
-        return { N, formula, isExactDivisor, infiniteImages: false };
+        return { 
+            N, 
+            formula, 
+            isExactDivisor, 
+            infiniteImages: false,
+            parity,
+            ratio: ratio,
+            intPart: N_int
+        };
     }
 
     // --- Motor de Física (Reflexões) ---
@@ -348,7 +392,7 @@
         const objY = state.radius * Math.sin(objRad);
 
         const onBisector = isOnBisector(state.objAngleDeg, state.thetaDeg);
-        const { N: N_theory, formula, infiniteImages } = calculateNumberOfImages(state.thetaDeg, onBisector);
+        const { N: N_theory, formula, infiniteImages, parity, ratio, intPart } = calculateNumberOfImages(state.thetaDeg, onBisector);
 
         // Caso especial: θ = 0° (infinitas imagens)
         if (infiniteImages) {
@@ -370,12 +414,21 @@
                 formula, 
                 onBisector, 
                 obj: {x: objX, y: objY},
-                infiniteImages: true
+                infiniteImages: true,
+                parity: "N/A"
             };
         }
 
         if (N_theory <= 0) {
-            return { images: [], N_theory, formula, onBisector, obj: {x: objX, y: objY}, infiniteImages: false };
+            return { 
+                images: [], 
+                N_theory, 
+                formula, 
+                onBisector, 
+                obj: {x: objX, y: objY}, 
+                infiniteImages: false,
+                parity
+            };
         }
 
         // BFS para encontrar imagens
@@ -435,7 +488,17 @@
             images = images.slice(0, N_theory);
         }
 
-        return { images, N_theory, formula, onBisector, obj: {x: objX, y: objY}, infiniteImages: false };
+        return { 
+            images, 
+            N_theory, 
+            formula, 
+            onBisector, 
+            obj: {x: objX, y: objY}, 
+            infiniteImages: false,
+            parity,
+            ratio,
+            intPart
+        };
     }
 
     // --- Renderização ---
@@ -618,6 +681,8 @@
         } else {
             statsInfo.innerHTML = `
                 <strong>Ângulo entre espelhos:</strong> ${state.thetaDeg}°<br>
+                <strong>360/θ:</strong> ${data.ratio.toFixed(2)}<br>
+                <strong>Parte inteira:</strong> ${data.intPart} (${data.parity})<br>
                 <strong>Ângulo do Objeto:</strong> ${state.objAngleDeg.toFixed(1)}°<br>
                 <strong>Na bissetriz:</strong> ${data.onBisector ? '<span style="color:green; font-weight:bold">SIM</span>' : 'NÃO'}<br>
                 <br>
@@ -743,5 +808,4 @@
 </script>
 
 </body>
-
 </html>
